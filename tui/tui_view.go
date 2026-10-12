@@ -15,6 +15,21 @@ var (
 	systemStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Italic(true)
 	chipStyle       = lipgloss.NewStyle().Background(lipgloss.Color("63")).Foreground(lipgloss.Color("231")).Bold(true)
 )
+
+const asciiLogo = `
+  ____                        _   _        ____ _     ___ 
+ / ___| ___   __ _  ___ _ __ | |_(_) ___  / ___| |   |_ _|
+| |  _ / _ \ / _' |/ _ \ '_ \| __| |/ __|| |   | |    | | 
+| |_| | (_) | (_| |  __/ | | | |_| | (__ | |___| |___ | | 
+ \____|\___/ \__, |\___|_| |_|\__|_|\___(_)____|_____|___|
+             |___/                                        
+`
+
+var (
+	logoStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("63")).Bold(true)
+	subtitleStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("205")).Italic(true)
+)
+
 func (m TuiModel) footView() string {
 	var sections []string
 
@@ -66,6 +81,11 @@ func (m *TuiModel) syncViewport() {
 	messageWrapStyle := lipgloss.NewStyle().Width(wrapWidth)
 
 	for _, msg := range m.history {
+		if msg.Role == "logo" {
+			content.WriteString(msg.Content)
+			content.WriteString("\n\n")
+			continue
+		}
 		roleLabel := ""
 		if msg.Role == "user" {
 			roleLabel = userStyle.Render("[User]")
@@ -88,67 +108,5 @@ func (m *TuiModel) syncViewport() {
 }
 
 func (m TuiModel) View() string {
-	// 1. Construimos PRIMERO toda la parte de abajo (el footer)
-	var footer strings.Builder
-
-	if m.thinking {
-		spin := lipgloss.NewStyle().Foreground(lipgloss.Color("205")).Render(m.spinner.View())
-		footer.WriteString(fmt.Sprintf("\n  %s Pensando...\n", spin))
-	}
-	
-	// Render Cola
-	if len(m.queue) > 0 {
-		footer.WriteString(systemStyle.Render(fmt.Sprintf("\n[Queue: %d items pending]\n", len(m.queue))))
-	}
-
-	// Render Input
-	footer.WriteString("\n")
-	footer.WriteString(m.input.View())
-	footer.WriteString("\n")
-
-	// Render chips de archivos cargados
-	if len(m.attachedFiles) > 0 {
-		footer.WriteString("Archivos en contexto: ")
-		for tag := range m.attachedFiles {
-			footer.WriteString(chipStyle.Render(" " + tag + " "))
-			footer.WriteString(" ")
-		}
-		footer.WriteString("\n")
-	}
-
-	// Render Dropdown
-	if m.showAutocomplete {
-		footer.WriteString("\n--- Archivos disponibles (Tab para adjuntar) ---\n")
-		for i, match := range m.matches {
-			if i == m.listIndex {
-				footer.WriteString(selectedStyle.Render("> " + match))
-				footer.WriteString("\n")
-			} else {
-				footer.WriteString(unselectedStyle.Render("  " + match))
-				footer.WriteString("\n")
-			}
-		}
-	}
-
-	// Convertimos el footer a string para medirlo
-	footerStr := footer.String()
-
-	// 2. LA SOLUCIÓN: Calculamos cuántas líneas ocupa todo ese texto
-	// lipgloss.Height cuenta exactamente los saltos de línea reales de footerStr
-	if m.terminalHeight > 0 {
-		footerHeight := lipgloss.Height(footerStr)
-		
-		// Le restamos el footer a la pantalla total para dárselo al viewport
-		m.viewport.Height = m.terminalHeight - footerHeight
-	}
-
-	// 3. Sincronizamos el viewport AHORA que tiene su tamaño exacto
-	m.syncViewport()
-
-	// 4. Juntamos el Viewport arriba y el Footer abajo
-	var finalView strings.Builder
-	finalView.WriteString(m.viewport.View())
-	finalView.WriteString(footerStr)
-
-	return finalView.String()
+	return lipgloss.JoinVertical(lipgloss.Left, m.viewport.View(), m.footView())
 }

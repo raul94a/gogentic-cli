@@ -5,6 +5,7 @@ import (
 	"agent-cli/ollama"
 	Ollama "agent-cli/ollama"
 	"agent-cli/utils"
+	"fmt"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/spinner"
@@ -21,14 +22,14 @@ type TuiModel struct {
 	currentWordStart int
 	currentWordEnd   int
 	terminalWidth    int
-	terminalHeight	 int
+	terminalHeight   int
 	streamChan       chan string
 	queue            []string
 	matches          []string
 	attachedFiles    map[string]string
 	spinner          spinner.Model
 	input            textinput.Model
-	viewport 		 viewport.Model
+	viewport         viewport.Model
 
 	config         Config.AgentConfig
 	ollama_service Ollama.Service
@@ -48,14 +49,22 @@ func New() TuiModel {
 	s := spinner.New()
 	s.Spinner = spinner.Pulse
 	config := Config.AgentConfig(Config.InitConfig())
+	// Formateamos el arte y el subtítulo
+	welcomeText := fmt.Sprintf("%s\n%s\n",
+		logoStyle.Render(asciiLogo),
+		subtitleStyle.Render("                  ▶ Model in use: "+config.ModelName),
+	)
 	return TuiModel{
-		config:        config,
-		spinner:       s,
-		input:         ti,
-		viewport:      vp,
-		streamChan:    make(chan string),
-		attachedFiles: make(map[string]string),
-		thinking:      false,
+		config: config,
+		history: []Ollama.Message{
+			{Role: "logo", Content: welcomeText},
+		}, 
+		spinner: s,
+		input:          ti,
+		viewport:       vp,
+		streamChan:     make(chan string),
+		attachedFiles:  make(map[string]string),
+		thinking:       false,
 		ollama_service: ollama.CreateServiceWithConfig(&config),
 	}
 }
@@ -140,7 +149,6 @@ func (m *TuiModel) checkAutocompletion() tea.Cmd {
 	m.showAutocomplete = false
 	return nil
 }
-
 
 func (m *TuiModel) searchFiles(term string) tea.Cmd {
 	return func() tea.Msg {
