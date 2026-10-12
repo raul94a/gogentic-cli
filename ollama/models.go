@@ -8,8 +8,11 @@ import (
 	"net/http"
 )
 
+// Message represents a prompt or response exchanged with an LLM.
 type Message struct {
+	// Role identifies the sender of the message (for example, "user", "assistant", or "system").
 	Role    string `json:"role"`
+	// Content contains the text payload of the message.
 	Content string `json:"content"`
 }
 

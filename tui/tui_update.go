@@ -11,12 +11,17 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// Update acts as the central brain for the TUI. It processes the incoming
+// [tea.Msg] and returns the updated model along with any new commands to execute.
+//
+// It specifically handles:
+//   - [SearchResultMsg]: Updates the file matches and triggers autocompletion.
+//   - [tea.KeyMsg]: Handles user keyboard input for navigation.
 func (m TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
 	case spinner.TickMsg:
-		// The spinner needs to animate to the next frame
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
 		return m, cmd
@@ -28,16 +33,13 @@ func (m TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewport.Width = msg.Width
 		m.input.Width = int(float64(msg.Width) * 0.8)
 
-		// 2. Calcular altura fija para la parte inferior (Input + márgenes)
-		// Reserva unas 4-5 líneas por defecto para el input y los márgenes.
-		// Si está el menú de autocomplete abierto, necesitas reservar unas 10 líneas.
-		footerHeight := 5 
+		footerHeight := 5
 		if m.showAutocomplete {
 			footerHeight += len(m.matches) + 2 // Altura del menú
 		}
-		
+
 		m.viewport.Height = msg.Height - footerHeight
-		
+
 		m.syncViewport()
 		m.viewport.GotoBottom()
 		return m, nil
@@ -80,17 +82,16 @@ func (m TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 
 				if strings.HasSuffix(selectedFile, "/") {
-				
+
 					newVal := val[:start] + "@" + selectedFile + val[end:]
 					m.input.SetValue(newVal)
 					m.input.SetCursor(start + 1 + len(selectedFile))
 
-					
 					searchCmd := m.checkAutocompletion()
 					return m, searchCmd
 
 				} else {
-					
+
 					content, err := os.ReadFile(selectedFile)
 					if err == nil {
 						tag := fmt.Sprintf("[@%s]", selectedFile)
@@ -105,7 +106,6 @@ func (m TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.input.SetCursor(start + len(tag) + 1)
 					}
 
-					// Cerrar autocompletado
 					m.showAutocomplete = false
 					m.matches = nil
 					return m, nil
@@ -141,10 +141,16 @@ func (m TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case SearchResultMsg:
+
+		// msg is the list of files and dirs
 		if len(msg) > 0 {
 			m.matches = msg
 			m.showAutocomplete = true
-			m.listIndex = 0
+			// the selected list index is a directory?
+			if m.listIndex >= 0 && m.listIndex < len(msg) && strings.HasSuffix(msg[m.listIndex], "/") {
+				return m.AutocompletionAndCommandsToEventLoop(cmds)
+			}
+
 		} else {
 			m.showAutocomplete = false
 		}
@@ -184,12 +190,15 @@ func (m TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	return m.AutocompletionAndCommandsToEventLoop(cmds)
+}
+
+// AutocompletionAndCommandsToEventLoop handles the Update commands plus the chekcAutocompletion commands response, if any.
+func (m *TuiModel) AutocompletionAndCommandsToEventLoop(cmds []tea.Cmd) (TuiModel, tea.Cmd) {
 	searchCmd := m.checkAutocompletion()
 	if searchCmd != nil {
 		cmds = append(cmds, searchCmd)
 	}
 
-
-
-	return m, tea.Batch(cmds...)
+	return *m, tea.Batch(cmds...)
 }

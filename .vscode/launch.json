@@ -1,0 +1,20 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch Package",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "args": ["--my-flag", "value"],
+            "env": {
+                "OLLAMA_URL": "http://localhost:11434/api/chat",
+                "MODEL_NAME": "gemma4:e4b",
+                "MAX_CONTEXT_CHARS": "400000",
+                "MAX_CONTEXT_TOKENS": "128000"
+            }
+        }
+    ]
+}
