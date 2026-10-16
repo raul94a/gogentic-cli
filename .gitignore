@@ -1,1 +1,5 @@
 .env
+python/
+python/Scripts
+python/Lib
+python/Include
