@@ -68,15 +68,13 @@ func (r RagService) getEmbeddings(text []string) ([][]float32, error) {
 
 // ProcessFile streams chunks from the file using Ingestor, generates embeddings, and stores them.
 func (r *RagService) ProcessFile(path string) error {
-	// TODO: Need a channel of a custom type
 	chunksChan := make(chan string)
-	errChan := make(chan error, 1)
+	var readError error = nil
 
 	go func() {
 		defer close(chunksChan)
-		defer close(errChan)
 		if err := r.ingestor.ReadChunks(path, chunksChan); err != nil {
-			errChan <- err
+			readError = err
 		}
 	}()
 
@@ -86,8 +84,11 @@ func (r *RagService) ProcessFile(path string) error {
 	chunks := make([]string, 0)
 
 	for chunk := range chunksChan {
+		if readError != nil {
+			return readError
+		}
 		// we need to modify each chunk
-		chunk = strings.ToValidUTF8(chunk,"")
+		chunk = strings.ToValidUTF8(chunk, "")
 		chunk = r.optimizeChunkForEmbbedingGemma2(chunk, filename)
 		chunks = append(chunks, chunk)
 		if len(chunks) != BATCH_SIZE {
@@ -104,13 +105,9 @@ func (r *RagService) ProcessFile(path string) error {
 			return err
 		}
 	}
-	
-	select {
-	case err := <-errChan:
-		return err
-	default:
-		return nil
-	}
+
+	return nil
+
 }
 
 func (r *RagService) processBatch(filename string, chunks *[]string, batchSize int) error {
@@ -175,4 +172,3 @@ func (r *RagService) cleanRetrievedDocWithEmbbedingGemma2Prefix(text string) str
 
 	return strings.TrimSpace(text)
 }
-

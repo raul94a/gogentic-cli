@@ -6,7 +6,6 @@ import (
 	"os"
 )
 
-
 // ReadChunks handles the reading of a file
 // each chunk will be emited through a channel.
 func (i *Ingestor) ReadChunks(path string, content chan<- string) error {
@@ -26,7 +25,9 @@ func (i *Ingestor) ReadChunks(path string, content chan<- string) error {
 
 	fileLength := fileInfo.Size()
 	// TODO: Remove
-	fmt.Printf("Reading %s with size of %d\n", path, fileLength)
+	if i.Debug {
+		fmt.Printf("Reading %s with size of %d\n", path, fileLength)
+	}
 
 	var start int64 = 0
 
@@ -36,7 +37,10 @@ func (i *Ingestor) ReadChunks(path string, content chan<- string) error {
 		if start > 0 {
 			start -= i.Overlap
 		}
-		fmt.Printf("Start has a value of %d\n", start)
+		if i.Debug {
+
+			fmt.Printf("Start has a value of %d\n", start)
+		}
 		remaining := fileLength - start
 
 		readSlice := buffer
@@ -45,11 +49,12 @@ func (i *Ingestor) ReadChunks(path string, content chan<- string) error {
 		}
 
 		n, err := file.ReadAt(readSlice, start)
-		fmt.Printf("number of bytes read is: %d\n", n)
+		if i.Debug {
+			fmt.Printf("number of bytes read is: %d\n", n)
+		}
 		if n > 0 {
 			content <- string(readSlice[:n])
 			start += int64(n)
-
 		}
 
 		if err != nil {

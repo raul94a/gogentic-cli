@@ -28,6 +28,7 @@ type Rag interface {
 type Ingestor struct {
 	Step    int64
 	Overlap int64
+	Debug   bool 
 }
 
 
