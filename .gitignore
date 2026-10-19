@@ -3,3 +3,5 @@ python/
 python/Scripts
 python/Lib
 python/Include
+test_question.ps1
+output/files

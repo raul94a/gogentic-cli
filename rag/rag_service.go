@@ -26,6 +26,9 @@ func NewRagService(collectionName string, vectorSize uint64, minScoreThreshold f
 		embeddingModel: os.Getenv("EMBEDDING_MODEL"),           // e.g. "embeddinggemma-2:270m" for just text
 	}
 }
+func (r *RagService) GetOverlap() int64 {
+	return r.ingestor.Overlap
+}
 
 func (r *RagService) optimizeChunkForEmbbedingGemma2(chunk string, filename string) string {
 	return fmt.Sprintf("title %s | text: %s", filename, chunk)
@@ -111,7 +114,9 @@ func (r *RagService) ProcessFile(path string) error {
 }
 
 func (r *RagService) processBatch(filename string, chunks *[]string, batchSize int) error {
-	fmt.Printf("Calling processBatch with BATCH SIZE %d", len(*chunks))
+	if r.ingestor.Debug {
+		fmt.Printf("Calling processBatch with BATCH SIZE %d\n", len(*chunks))
+	}
 	embeddings, err := r.getEmbeddings(*chunks)
 	if err != nil {
 		return fmt.Errorf("getEmbeddings failed")
