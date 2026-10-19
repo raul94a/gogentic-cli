@@ -1,6 +1,9 @@
 {
     "questions": [
-        
+        {
+            "text": "",
+            "expectedResult": ""
+        }
     ],
     "outputDir": "../../output/files/",
     "overlaps": [
