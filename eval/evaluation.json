@@ -1,0 +1,14 @@
+
+{
+    "questions": [
+    
+    ], 
+    "outputDir": "../../output/files/",
+    "overlaps": [
+        
+    ],
+    "step": 1000,
+    "threshold": 0.655,
+    "type": "overlap",
+    "vectorSize": 768
+}

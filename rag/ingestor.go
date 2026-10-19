@@ -37,10 +37,7 @@ func (i *Ingestor) ReadChunks(path string, content chan<- string) error {
 		if start > 0 {
 			start -= i.Overlap
 		}
-		if i.Debug {
 
-			fmt.Printf("Start has a value of %d\n", start)
-		}
 		remaining := fileLength - start
 
 		readSlice := buffer
