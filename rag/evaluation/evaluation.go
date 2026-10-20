@@ -11,38 +11,9 @@ import (
 )
 
 
-// EvaluatedDocument is a result of the Retrieve from Rag for the evaluation process.
-type EvaluatedDocument struct {
-	ID         string  `json:"id"`
-	Score      float32 `json:"score"`
-	Source     string  `json:"source"`
-	ChunkIndex int     `json:"chunk_index"`
-}
-
-func ParseEvaluatedDocuments(docs []rag.RetrievedDocument) ([]EvaluatedDocument) {
-	evs := make([]EvaluatedDocument, 0)
-	for _, doc := range docs {
-		ev := EvaluatedDocument {
-			ID: doc.ID,
-			Score: doc.Score,
-			Source: doc.Source,
-			ChunkIndex: doc.ChunkIndex,
-		}
-		evs = append(evs, ev)
-	}
-	return evs
-}
-
-type OverlapSize int64
-
-type Analysis struct {
-	Question string                                  `json:"question"`
-	Results  map[OverlapSize][]EvaluatedDocument    `json:"results"`
-}
-
 type Evaluation interface {
 	Load() error
-	Process() ([]Analysis, error)
+	Process(*OverlapEvaluationInput) ([]EvaluationOverlapOutput, error)
 }
 
 // EvaluationOverlapsImpl hold the parameters in order to evaluate different parameters for the RAG implementation
@@ -50,7 +21,7 @@ type EvaluationOverlapsImpl struct {
 	Overlaps   []int64
 	Step       int64
 	VectorSize uint64
-	questions  []string
+	questions  []EvaluationQuestion
 	Filepaths  []string
 }
 
@@ -104,7 +75,7 @@ func (e *EvaluationOverlapsImpl) Load() error {
 // 1. Load the information into Qdrant
 // 2. Use the retrieval pipeline -Ask a question
 // 3. Track the score for the Retrieval
-func (e *EvaluationOverlapsImpl) Process() ([]Analysis, error) {
+func (e *EvaluationOverlapsImpl) Process(input *OverlapEvaluationInput) ([]EvaluationOverlapOutput, error) {
 
 	const COLLECTION_NAME = "evaluation_overlap_size_{size}"
 	const THREASHOLD = 0.655
@@ -113,44 +84,69 @@ func (e *EvaluationOverlapsImpl) Process() ([]Analysis, error) {
 	vsize := e.VectorSize
 	services := make([]rag.Rag, 0)
 
-	analysisResult := make([]Analysis, 0)
+
+	evals := make([]EvaluationOverlapOutput, 0)
+
+	questionTable := make(map[string]string)
+
+	for _, q := range input.Questions {
+		questionTable[q.Text] = q.ExpectedResult
+	}
 
 	for i := range overlaps {
 		overlap := overlaps[i]
-
 		collection := strings.ReplaceAll(COLLECTION_NAME, "{size}", strconv.Itoa(int(overlap)))
 		svc := rag.NewRagService(collection, vsize, THREASHOLD, step, overlap)
 		services = append(services, svc)
 	}
 
 	for _, question := range e.questions {
-		analysis := Analysis{
-			Question: question,
-			Results:  make(map[OverlapSize][]EvaluatedDocument),
+	
+
+		overlapEval := EvaluationOverlapOutput{
+			Question: question.Text,
+			Results:  make([]Result, 0),
 		}
+
 		for _, svc := range services {
+			result := Result{}
 			// Process the question
-			d, err := svc.Retrieve(question)
+			d, err := svc.Retrieve(question.Text)
 			docs := ParseEvaluatedDocuments(d)
 			if err != nil {
-				return []Analysis{}, err
+				return []EvaluationOverlapOutput{}, err
 			}
 
 			svcImpl, ok := svc.(*rag.RagService)
 			if !ok {
-				return []Analysis{}, fmt.Errorf("Invalid type of Rag. Cannot cast to RagService")
+				return []EvaluationOverlapOutput{}, fmt.Errorf("Invalid type of Rag. Cannot cast to RagService")
 			}
-			analysis.Results[OverlapSize(svcImpl.GetOverlap())] = docs
+			
+			correctness := false
+			if len(docs) != 0 {
+				correctness = questionTable[question.Text] == docs[0].Source
+				fmt.Printf("Para el overlap [%d]\n", svcImpl.GetOverlap())
+				fmt.Printf("Pregunta [%s] \nValor en cache {%s}\nResultado esperado: %s\n", question.Text, questionTable[question.Text], docs[0].Source)
+				result.MaxScore = float64(docs[0].Score)
+			}
+			result.Correctness = correctness
+
+			result.Documents = docs
+			result.Overlap = int(svcImpl.GetOverlap())
+			result.MeanScore = float64(GetMeanScore(docs))
+			overlapEval.Results = append(overlapEval.Results, result)
+
 		}
-		analysisResult = append(analysisResult, analysis)
+		
+		evals = append(evals, overlapEval)
 
 	}
 
-	return analysisResult, nil
+	return evals, nil
 
 }
 
-func CreateOverlapEvaluation(overlaps []int64, step int64, vsize uint64, q []string, filepaths []string) Evaluation {
+func CreateOverlapEvaluation(overlaps []int64, step int64, vsize uint64, q []EvaluationQuestion, filepaths []string) Evaluation {
 	return &EvaluationOverlapsImpl{
 		Filepaths:  filepaths,
 		Overlaps:   overlaps,
@@ -158,4 +154,19 @@ func CreateOverlapEvaluation(overlaps []int64, step int64, vsize uint64, q []str
 		VectorSize: vsize,
 		questions:  q,
 	}
+}
+
+func GetMeanScore(data []EvaluatedDocument) float32 {
+	if len(data) == 0 {
+		return 0.0
+	}
+
+	total := float32(len(data))
+	acc := float32(0.0)
+
+	for _, doc := range data {
+		acc += doc.Score
+	}
+
+	return float32(acc / total)
 }

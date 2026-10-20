@@ -2,7 +2,7 @@
     "questions": [
         {
             "text": "",
-            "type": "positive|fuzzy|null",
+            "type": "positive|fuzzy|negative",
             "expectedResult": ""
         }
     ],
