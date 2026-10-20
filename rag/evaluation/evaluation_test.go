@@ -34,50 +34,40 @@ func TestEvaluationOverlapLoadDatabase(t *testing.T) {
 	sv := parseStepAndVsize(vsize_env, step_env)
 	step := sv.Step
 	vsize := sv.Vsize
-	question := os.Getenv("RAG_TEST_QUESTION")
+	
 	filepaths := os.Getenv("RAG_TEST_FILEPATHS")
 	filepathsSlice := strings.Split(filepaths, ",")
 	evaluationService := CreateOverlapEvaluation(
 		overlaps,
 		step,
 		vsize,
-		[]string{question},
+		[]EvaluationQuestion{},
 		filepathsSlice,
 	)
 	evaluationService.Load()
 }
 
 func TestEvaluationOverlap(t *testing.T) {
-
-	overlaps := []int64{25, 50, 100, 150, 200, 250, 500}
-	step_env := os.Getenv("RAG_TEST_STEP")
-	vsize_env := os.Getenv("RAG_TEST_VSIZE")
-	sv := parseStepAndVsize(vsize_env, step_env)
-	step := sv.Step
-	vsize := sv.Vsize
-	questions := os.Getenv("RAG_TEST_QUESTIONS")
-	questionsSlice := strings.Split(questions, ",")
-	filepaths := os.Getenv("RAG_TEST_FILEPATHS")
-	filepathsSlice := strings.Split(filepaths, ",")
-	fmt.Printf("FILEPATHSLICE %d", len(filepathsSlice))
-
+	filename := "../../eval/evaluation_overlap.json"
+	input := NewOverlapEvaluationInput(filename)
+	fmt.Println(input)
 	evaluationService := CreateOverlapEvaluation(
-		overlaps,
-		step,
-		vsize,
-		questionsSlice,
-		filepathsSlice,
+		input.Overlaps,
+		input.Step,
+		input.VectorSize,
+		input.Questions,
+		[]string{},
 	)
-	analysis, err := evaluationService.Process()
+	analysis, err := evaluationService.Process(&input)
 	if err != nil {
 		panic(err)
 	}
 
 	result, _ := json.Marshal(analysis)
 
-	filename := fmt.Sprintf("../../output/files/%s_OVERLAPS_result.json", uuid.NewMD5(uuid.NameSpaceURL, result))
+	filename = fmt.Sprintf("%s%s_OVERLAPS_result.json", input.OutputDir ,uuid.NewMD5(uuid.NameSpaceURL, result))
 	if err := os.WriteFile(filename, result, os.FileMode(os.O_WRONLY)); err != nil {
 		fmt.Printf("Error is %v", err)
 	}
-	
+
 }
