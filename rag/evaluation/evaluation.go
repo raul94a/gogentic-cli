@@ -10,7 +10,6 @@ import (
 	"sync"
 )
 
-
 type Evaluation interface {
 	Load() error
 	Process(*OverlapEvaluationInput) ([]EvaluationOverlapOutput, error)
@@ -84,7 +83,6 @@ func (e *EvaluationOverlapsImpl) Process(input *OverlapEvaluationInput) ([]Evalu
 	vsize := e.VectorSize
 	services := make([]rag.Rag, 0)
 
-
 	evals := make([]EvaluationOverlapOutput, 0)
 
 	questionTable := make(map[string]string)
@@ -101,7 +99,6 @@ func (e *EvaluationOverlapsImpl) Process(input *OverlapEvaluationInput) ([]Evalu
 	}
 
 	for _, question := range e.questions {
-	
 
 		overlapEval := EvaluationOverlapOutput{
 			Question: question.Text,
@@ -109,41 +106,53 @@ func (e *EvaluationOverlapsImpl) Process(input *OverlapEvaluationInput) ([]Evalu
 		}
 
 		for _, svc := range services {
-			result := Result{}
-			// Process the question
-			d, err := svc.Retrieve(question.Text)
-			docs := ParseEvaluatedDocuments(d)
+
+			result, err := GetResult(question, &questionTable, svc)
 			if err != nil {
 				return []EvaluationOverlapOutput{}, err
 			}
-
-			svcImpl, ok := svc.(*rag.RagService)
-			if !ok {
-				return []EvaluationOverlapOutput{}, fmt.Errorf("Invalid type of Rag. Cannot cast to RagService")
+			if result == nil {
+				panic("[Error] Result cannot be null")
 			}
-			
-			correctness := false
-			if len(docs) != 0 {
-				correctness = questionTable[question.Text] == docs[0].Source
-				fmt.Printf("Para el overlap [%d]\n", svcImpl.GetOverlap())
-				fmt.Printf("Pregunta [%s] \nValor en cache {%s}\nResultado esperado: %s\n", question.Text, questionTable[question.Text], docs[0].Source)
-				result.MaxScore = float64(docs[0].Score)
-			}
-			result.Correctness = correctness
-
-			result.Documents = docs
-			result.Overlap = int(svcImpl.GetOverlap())
-			result.MeanScore = float64(GetMeanScore(docs))
-			overlapEval.Results = append(overlapEval.Results, result)
+			overlapEval.Results = append(overlapEval.Results, *result)
 
 		}
-		
+
 		evals = append(evals, overlapEval)
 
 	}
 
 	return evals, nil
 
+}
+
+func GetResult(question EvaluationQuestion, questionTable *map[string]string, svc rag.Rag) (*Result, error) {
+	result := Result{}
+	// Process the question
+	d, err := svc.Retrieve(question.Text)
+	docs := ParseEvaluatedDocuments(d)
+	if err != nil {
+		return nil, err
+	}
+
+	svcImpl, ok := svc.(*rag.RagService)
+	if !ok {
+		return nil, fmt.Errorf("Invalid type of Rag. Cannot cast to RagService")
+	}
+
+	correctness := false
+	if len(docs) != 0 {
+		correctness = (*questionTable)[question.Text] == docs[0].Source
+		fmt.Printf("Para el overlap [%d]\n", svcImpl.GetOverlap())
+		fmt.Printf("Pregunta [%s] \nValor en cache {%s}\nResultado esperado: %s\n", question.Text, (*questionTable)[question.Text], docs[0].Source)
+		result.MaxScore = float64(docs[0].Score)
+	}
+	result.Correctness = correctness
+
+	result.Documents = docs
+	result.Overlap = int(svcImpl.GetOverlap())
+	result.MeanScore = float64(GetMeanScore(docs))
+	return &result, nil
 }
 
 func CreateOverlapEvaluation(overlaps []int64, step int64, vsize uint64, q []EvaluationQuestion, filepaths []string) Evaluation {
