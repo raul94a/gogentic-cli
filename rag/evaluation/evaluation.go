@@ -141,17 +141,50 @@ func GetResult(question EvaluationQuestion, questionTable *map[string]string, sv
 	}
 
 	correctness := false
-	if len(docs) != 0 {
-		correctness = (*questionTable)[question.Text] == docs[0].Source
-		fmt.Printf("Para el overlap [%d]\n", svcImpl.GetOverlap())
-		fmt.Printf("Pregunta [%s] \nValor en cache {%s}\nResultado esperado: %s\n", question.Text, (*questionTable)[question.Text], docs[0].Source)
-		result.MaxScore = float64(docs[0].Score)
-	}
-	result.Correctness = correctness
+	relevantDocs := 0
+	relevantVector := make([]bool, len(docs))
+	rankedPrecisionVector := make([]float32, len(docs))
+	rankedRecallVector := make([]float32, len(docs))
 
+	if len(docs) != 0 {
+		expectedSource := (*questionTable)[question.Text]
+		correctness = expectedSource == docs[0].Source
+		fmt.Printf("Para el overlap [%d]\n", svcImpl.GetOverlap())
+		fmt.Printf("Pregunta [%s] \nValor en cache {%s}\nResultado esperado: %s\n", question.Text, expectedSource, docs[0].Source)
+		result.MaxScore = float64(docs[0].Score)
+		for i, doc := range docs {
+			if expectedSource == doc.Source {
+				relevantVector[i] = true
+				relevantDocs++
+			} else {
+				relevantVector[i] = false
+			}
+			rankedPrecisionVector[i] = float32(relevantDocs) / float32(i + 1)
+		}
+	}
+	fmt.Printf("RELEVANT VECTOR %v\n",relevantVector)
+	result.Correctness = correctness
+	result.RelevantDocs = int64(relevantDocs)
 	result.Documents = docs
 	result.Overlap = int(svcImpl.GetOverlap())
 	result.MeanScore = float64(GetMeanScore(docs))
+	result.RankedPrecision = rankedPrecisionVector
+	
+	// This must be done here, because the recall needs the total relevant documents
+	if len(docs) != 0 {
+		counter := 0
+		for i, relevant := range relevantVector {
+			if relevant {
+				counter++
+			}
+			if relevantDocs > 0 {
+				rankedRecallVector[i] = float32(counter) / float32(relevantDocs)
+			}
+	
+		}
+	}
+	result.RankedRecall = rankedRecallVector
+
 	return &result, nil
 }
 
