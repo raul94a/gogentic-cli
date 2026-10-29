@@ -10,11 +10,15 @@ type EvaluationOverlapOutput struct {
 }
 
 type Result struct {
-	Correctness bool                `json:"correctness"`
-	MaxScore    float64             `json:"maxScore"`
-	MeanScore   float64             `json:"meanScore"`
-	Overlap     int                 `json:"overlap"`
-	Documents   []EvaluatedDocument `json:"documents"`
+	Correctness 	bool                `json:"correctness"`
+	MaxScore    	float64             `json:"maxScore"`
+	MeanScore   	float64             `json:"meanScore"`
+	Overlap     	int                 `json:"overlap"`
+	Documents   	[]EvaluatedDocument `json:"documents"`
+	RankedPrecision []float32			`json:"rankedPrecision"`
+	RankedRecall	[]float32			`json:"rankedRecall"`
+	// number of documents relevant for the query
+	RelevantDocs	int64				`json:"relevantDocs"`
 }
 
 // EvaluatedDocument is a result of the Retrieve from Rag for the evaluation process.
