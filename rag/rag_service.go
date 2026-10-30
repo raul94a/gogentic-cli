@@ -30,6 +30,10 @@ func (r *RagService) GetOverlap() int64 {
 	return r.ingestor.Overlap
 }
 
+func (r *RagService) GetStep() int64 {
+	return r.ingestor.Step
+}
+
 func (r *RagService) optimizeChunkForEmbbedingGemma2(chunk string, filename string) string {
 	return fmt.Sprintf("title %s | text: %s", filename, chunk)
 }

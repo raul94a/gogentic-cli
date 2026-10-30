@@ -5,6 +5,10 @@ import (
 	"os"
 )
 
+type EvaluationInput interface {
+	Duck()
+}
+
 type EvaluationQuestion struct {
 	Text           string `json:"text"`
 	Type           string `json:"type"`
@@ -21,7 +25,9 @@ type OverlapEvaluationInput struct {
 	VectorSize uint64               `json:"vectorSize"`
 }
 
-func NewOverlapEvaluationInput(filename string) OverlapEvaluationInput {
+func (o OverlapEvaluationInput) Duck() {}
+
+func NewOverlapEvaluationInput(filename string) EvaluationInput {
 
 	fileRead, err := os.ReadFile(filename)
 	if err != nil {
@@ -29,6 +35,36 @@ func NewOverlapEvaluationInput(filename string) OverlapEvaluationInput {
 	}
 
 	var evaluationInput OverlapEvaluationInput
+	if err := json.Unmarshal(fileRead, &evaluationInput); err != nil {
+		panic(err)
+	}
+	return evaluationInput
+}
+
+
+// Step evaluation
+
+type StepEvaluationInput struct {
+	Questions  []EvaluationQuestion `json:"questions"`
+	OutputDir  string               `json:"outputDir"`
+	Steps   []int64                 `json:"steps"`
+	Overlap    int64                `json:"overlap"`
+	Threshold  float32              `json:"threshold"`
+	Type       string               `json:"type"`
+	VectorSize uint64               `json:"vectorSize"`
+}
+
+func (o StepEvaluationInput ) Duck() {}
+
+
+func NewStepEvaluationInput(filename string) EvaluationInput {
+
+	fileRead, err := os.ReadFile(filename)
+	if err != nil {
+		panic(err)
+	}
+
+	var evaluationInput StepEvaluationInput
 	if err := json.Unmarshal(fileRead, &evaluationInput); err != nil {
 		panic(err)
 	}
