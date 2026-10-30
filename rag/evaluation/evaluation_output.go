@@ -2,12 +2,16 @@ package evaluation
 
 import rag "gogentic-rag"
 
-type EvaluationOutput interface{}
+type EvaluationOutput interface{
+	Duck()
+}
 
 type EvaluationOverlapOutput struct {
 	Question string   `json:"question"`
 	Results  []Result `json:"results"`
 }
+
+func (e EvaluationOverlapOutput) Duck() {}
 
 type Result struct {
 	Correctness 	bool                `json:"correctness"`
@@ -41,4 +45,24 @@ func ParseEvaluatedDocuments(docs []rag.RetrievedDocument) []EvaluatedDocument {
 		evs = append(evs, ev)
 	}
 	return evs
+}
+
+
+type EvaluationStepOutput struct {
+	Question string   `json:"question"`
+	Results  []StepResult `json:"results"`
+}
+
+func (e EvaluationStepOutput) Duck() {}
+
+type StepResult struct {
+	Correctness 	bool                `json:"correctness"`
+	MaxScore    	float64             `json:"maxScore"`
+	MeanScore   	float64             `json:"meanScore"`
+	Step	    	int                 `json:"step"`
+	Documents   	[]EvaluatedDocument `json:"documents"`
+	RankedPrecision []float32			`json:"rankedPrecision"`
+	RankedRecall	[]float32			`json:"rankedRecall"`
+	// number of documents relevant for the query
+	RelevantDocs	int64				`json:"relevantDocs"`
 }

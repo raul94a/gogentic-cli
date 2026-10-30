@@ -1,0 +1,21 @@
+{
+    "questions": [
+        {
+            "text": "",
+            "type": "positive|fuzzy|negative",
+            "expectedResult": ""
+        }
+    ],
+    "outputDir": "../../output/files/",
+    "steps": [
+        256,
+        512,
+        1024,
+        2048,
+        4096
+    ],
+    "overlap": 150,
+    "threshold": 0.655,
+    "type": "step",
+    "vectorSize": 768
+}

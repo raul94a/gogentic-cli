@@ -8,6 +8,14 @@ import matplotlib.pyplot as plt
 def parse_args():
     parser = argparse.ArgumentParser(description="Plot grouped PR curves from JSON via stdin.")
     parser.add_argument(
+        "--overlap",
+        "-ov",
+        type=bool,
+        required=False,
+        help="If the analysis is for Overlap pass the --overlap or -ov flag"
+
+    )
+    parser.add_argument(
         "--output-dir",
         "-o",
         type=str,
@@ -22,6 +30,7 @@ def sanitize_filename(name):
 
 def main():
     args = parse_args()
+    is_overlap = args.overlap
     out_dir = Path(args.output_dir)
     
     # Ensure target directory exists
@@ -49,30 +58,53 @@ def main():
         plt.figure(figsize=(10, 7))
 
         # 3. Plot a curve for each overlap in the results
-        for res in results:
-            overlap = res.get("overlap", "Unknown")
-            recall = res.get("rankedRecall", [])
-            precision = res.get("rankedPrecision", [])
+        overlap = 0
+        step = 0
+        if is_overlap:
+            for res in results:
+                overlap = res.get("overlap", "Unknown")
+                recall = res.get("rankedRecall", [])
+                precision = res.get("rankedPrecision", [])
 
-            if not recall or not precision:
-                continue
+                if not recall or not precision:
+                    continue
 
-            # Continuous lines and points
-            plt.plot(
-                recall,
-                precision,
-                linestyle="-",
-                drawstyle="steps-post",
-                marker="o",
-                linewidth=2,
-                markersize=6,
-                label=f"Overlap: {overlap}"
-            )
+                # Continuous lines and points
+                plt.plot(
+                    recall,
+                    precision,
+                    linestyle="-",
+                    drawstyle="steps-post",
+                    marker="o",
+                    linewidth=2,
+                    markersize=6,
+                    label=f"Overlap: {overlap}"
+                )
+        else:
+             for res in results:
+                step = res.get("step", "Unknown")
+                recall = res.get("rankedRecall", [])
+                precision = res.get("rankedPrecision", [])
+
+                if not recall or not precision:
+                    continue
+
+                # Continuous lines and points
+                plt.plot(
+                    recall,
+                    precision,
+                    linestyle="-",
+                    drawstyle="steps-post",
+                    marker="o",
+                    linewidth=2,
+                    markersize=6,
+                    label=f"step: {step}"
+                )
         c += 1
         # 4. Decorate the chart
         plt.xlabel("Recall", fontsize=12)
         plt.ylabel("Precision", fontsize=12)
-        plt.title(f"Precision-Recall Curves\nQuestion: {str(c)} overlap {overlap}", fontsize=14, weight="bold")
+        plt.title(f"Precision-Recall Curves\nQuestion: {str(c)}  {'overlap' if is_overlap else 'step'} {overlap if str(is_overlap) else str(step)}", fontsize=14, weight="bold")
         plt.xlim(0.0, 1.05)
         plt.ylim(0.0, 1.05)
         plt.grid(True, linestyle="--", alpha=0.6)
@@ -83,7 +115,7 @@ def main():
 
         # 5. Save the image based on the question name
         safe_q = sanitize_filename(question)
-        file_path = out_dir / f"PR_{safe_q}.png"
+        file_path = out_dir / f"PR_{safe_q}_{'overlaps' if is_overlap else 'steps'}.png"
         
         plt.savefig(file_path, dpi=300)
         plt.close()
