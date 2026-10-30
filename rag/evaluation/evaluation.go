@@ -49,10 +49,11 @@ func (e *EvaluationOverlapsImpl) Load() error {
 
 		var wait sync.WaitGroup
 		var readErr error
+		ragservice := svc.(*rag.RagService)
 		wait.Go(func() {
 			for _, file := range e.Filepaths {
 
-				fmt.Printf("Proccessing file %s\n", file)
+				fmt.Printf("Proccessing file %s for Overlap %d\n", file, ragservice.GetOverlap())
 				if err := svc.ProcessFile(file); err != nil {
 					readErr = err
 				}
@@ -74,10 +75,14 @@ func (e *EvaluationOverlapsImpl) Load() error {
 // 1. Load the information into Qdrant
 // 2. Use the retrieval pipeline -Ask a question
 // 3. Track the score for the Retrieval
+//
+// Process will take the K closes documents for the input. Check LIMIT to change it's value
+// Maybe it's a good idea to pass the value to the function in order to configure it. 
 func (e *EvaluationOverlapsImpl) Process(input *OverlapEvaluationInput) ([]EvaluationOverlapOutput, error) {
 
 	const COLLECTION_NAME = "evaluation_overlap_size_{size}"
 	const THREASHOLD = 0.655
+	const LIMIT = 10
 	overlaps := e.Overlaps
 	step := e.Step
 	vsize := e.VectorSize
@@ -107,7 +112,7 @@ func (e *EvaluationOverlapsImpl) Process(input *OverlapEvaluationInput) ([]Evalu
 
 		for _, svc := range services {
 
-			result, err := GetResult(question, &questionTable, svc)
+			result, err := GetResult(question, &questionTable, svc, LIMIT)
 			if err != nil {
 				return []EvaluationOverlapOutput{}, err
 			}
@@ -126,10 +131,10 @@ func (e *EvaluationOverlapsImpl) Process(input *OverlapEvaluationInput) ([]Evalu
 
 }
 
-func GetResult(question EvaluationQuestion, questionTable *map[string]string, svc rag.Rag) (*Result, error) {
+func GetResult(question EvaluationQuestion, questionTable *map[string]string, svc rag.Rag, limit int) (*Result, error) {
 	result := Result{}
 	// Process the question
-	d, err := svc.Retrieve(question.Text)
+	d, err := svc.Retrieve(question.Text, limit)
 	docs := ParseEvaluatedDocuments(d)
 	if err != nil {
 		return nil, err

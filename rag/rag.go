@@ -19,7 +19,8 @@ type Rag interface {
 	// ProcessFile reads a file to store the embeddings into a Vector Database.
 	ProcessFile(path string) error
 	// Retrieve uses a prompt to retrieve close information to it from a Vector Database
-	Retrieve(prompt string) ([]RetrievedDocument, error)
+	// limit will limit the search to the closest K documents for the prompt/query.
+	Retrieve(prompt string, limit int) ([]RetrievedDocument, error)
 }
 
 // Ingestor will handle stream process of files to emit chunks of text.

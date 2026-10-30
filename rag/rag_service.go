@@ -73,7 +73,7 @@ func (r RagService) getEmbeddings(text []string) ([][]float32, error) {
 func (r *RagService) ProcessFile(path string) error {
 	chunksChan := make(chan string)
 	var readError error = nil
-
+	
 	go func() {
 		defer close(chunksChan)
 		if err := r.ingestor.ReadChunks(path, chunksChan); err != nil {
@@ -108,6 +108,7 @@ func (r *RagService) ProcessFile(path string) error {
 			return err
 		}
 	}
+	
 
 	return nil
 
@@ -141,7 +142,7 @@ func (r *RagService) ProcessText(prompt string) error {
 }
 
 // Retrieve converts a prompt into an embedding and queries Qdrant for the top 5 closest chunks.
-func (r *RagService) Retrieve(prompt string) ([]RetrievedDocument, error) {
+func (r *RagService) Retrieve(prompt string, limit int) ([]RetrievedDocument, error) {
 	if len(strings.TrimSpace(prompt)) == 0 {
 		return []RetrievedDocument{}, fmt.Errorf("Prompt cannot be empty")
 	}
@@ -152,7 +153,7 @@ func (r *RagService) Retrieve(prompt string) ([]RetrievedDocument, error) {
 		return []RetrievedDocument{}, err
 	}
 
-	docs, err := r.db.Query(queryEmbedding[0], 5)
+	docs, err := r.db.Query(queryEmbedding[0], uint64(limit))
 	if err != nil {
 		return []RetrievedDocument{}, err
 	}
