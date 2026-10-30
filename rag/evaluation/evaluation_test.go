@@ -1,9 +1,11 @@
 package evaluation
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"testing"
@@ -27,6 +29,7 @@ func parseStepAndVsize(vsize string, step string) StepAndVectorSize {
 	return StepAndVectorSize{Vsize: valv, Step: vals}
 }
 
+// go test -timeout 30m
 func TestEvaluationOverlapLoadDatabase(t *testing.T) {
 	overlaps := []int64{25, 50, 100, 150, 200, 250, 500}
 	step_env := os.Getenv("RAG_TEST_STEP")
@@ -48,6 +51,7 @@ func TestEvaluationOverlapLoadDatabase(t *testing.T) {
 }
 
 func TestEvaluationOverlap(t *testing.T) {
+	// TODO: this is a good candidate for an env variable
 	filename := "../../eval/evaluation_overlap.json"
 	input := NewOverlapEvaluationInput(filename)
 	fmt.Println(input)
@@ -58,6 +62,7 @@ func TestEvaluationOverlap(t *testing.T) {
 		input.Questions,
 		[]string{},
 	)
+	
 	analysis, err := evaluationService.Process(&input)
 	if err != nil {
 		panic(err)
@@ -69,5 +74,22 @@ func TestEvaluationOverlap(t *testing.T) {
 	if err := os.WriteFile(filename, result, os.FileMode(os.O_WRONLY)); err != nil {
 		fmt.Printf("Error is %v", err)
 	}
+
+	// maybe it's a good idea to split this into a function
+	cmd := exec.Command("python3", "./python/plot.py", "-o", "../../output/files")
+
+	cmd.Stdin = bytes.NewReader(result)
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err = cmd.Run()
+	if err != nil {
+		t.Fatalf("Python script failed: %v\nStderr: %s", err, stderr.String())
+	}
+
+	fmt.Print(stdout.String())
 
 }

@@ -33,7 +33,7 @@ func main() {
 	// }()
 
 	question := "Your question"
-	docs, err := rag_service.Retrieve(question)
+	docs, err := rag_service.Retrieve(question, 5)
 	if err != nil {
 		log.Fatalf("Retrieve failed: %v", err)
 	}

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-
 	"github.com/google/uuid"
 	"github.com/qdrant/go-client/qdrant"
 )
@@ -140,8 +139,8 @@ func CreateDatabase(c string, vectorSize uint64, minScoreThreshold float32) *dat
 		Host:     os.Getenv("VECTOR_DATABASE_URL"),
 		Port:     int(port),
 		UseTLS:   false, // uses default config with minimum TLS version set to 1.3
-		PoolSize: 3,
-		// KeepAliveTime: 10,
+		PoolSize: 5,
+		KeepAliveTime: 120,
 		// KeepAliveTimeout: 2,
 		// TLSConfig: &tls.Config{...},
 		// GrpcOptions: []grpc.DialOption{},

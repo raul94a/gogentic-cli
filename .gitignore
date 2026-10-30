@@ -1,8 +1,8 @@
 .env
 python/
-python/Scripts
-python/Lib
-python/Include
+./python/Scripts
+./python/Lib
+./python/Include
 test_question.ps1
 output/files
 eval/evaluation_overlap.json

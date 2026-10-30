@@ -53,7 +53,7 @@ func createRagMock(step, overlap int64) Rag {
 }
 
 // Retrieve uses a prompt to retrieve close information to it from a Vector Database
-func (r *RagServiceMock) Retrieve(prompt string) ([]RetrievedDocument, error) {
+func (r *RagServiceMock) Retrieve(prompt string, limit int) ([]RetrievedDocument, error) {
 	return []RetrievedDocument{}, nil
 }
 func TestProcessFileOverlapBiggerThanStep(t *testing.T) {
