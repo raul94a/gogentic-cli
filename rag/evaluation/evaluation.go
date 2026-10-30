@@ -70,8 +70,14 @@ func (e *EvaluationOverlapsImpl) Load() error {
 	return nil
 }
 
+// Example of evaluation:
+
+// Any other evaluation struct can inherit from the Evaluation interfaace
+// and implement its own evaluation. Depending on the used source the developer may
+// have to program its own implementation.
+
 // We have N services ready to process the evaluation algorithm
-// Each servic will:
+// Each service will:
 // 1. Load the information into Qdrant
 // 2. Use the retrieval pipeline -Ask a question
 // 3. Track the score for the Retrieval
